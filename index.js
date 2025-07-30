@@ -139,6 +139,8 @@ app.get("/get-daraz-orders", async (req, res) => {
   const timestamp = Date.now().toString();
   const { access_token, created_after, status } = req.query;
 
+  console.log(access_token);
+  
 
   if (!access_token) {
     return res.status(400).json({ error: "Missing access_token" });
@@ -734,12 +736,15 @@ app.post("/make-order-rts", async (req, res) => {
   }
 });
 
-app.post("/make-order-pack", async (req, res) => {
+app.post("/make-order-pack-and-rts", async (req, res) => {
   const timestamp = Date.now().toString();
   const packReq = req.body || {};
   const { access_token } = req.query;
 
-  // console.log(access_token);
+  console.log("🚀 Pack and RTS API Request Started");
+  console.log("📝 Request Body:", JSON.stringify(packReq, null, 2));
+  console.log("🔑 Access Token:", access_token);
+
   if (!access_token) {
     return res.status(400).json({ error: "Missing access_token" });
   }
@@ -748,105 +753,139 @@ app.post("/make-order-pack", async (req, res) => {
     return res.status(400).json({ error: "Missing or invalid pack_order_list" });
   }
 
-  const apiPath = "/order/fulfill/pack";
-  const params = {
-    app_key: APP_KEY,
-    access_token,
-    sign_method: "sha256",
-    timestamp,
-  };
-
-  // For POST requests with body, include the body content in signature
-  const paramsWithBody = {
-    ...params,
-    packReq: JSON.stringify(packReq)
-  };
-
-  const sign = generateSign(apiPath, paramsWithBody, APP_SECRET);
-
   try {
-    const response = await axios.post(
+    // STEP 1: Pack the orders
+    console.log("📦 Step 1: Packing orders...");
+    const packApiPath = "/order/fulfill/pack";
+    const packParams = {
+      app_key: APP_KEY,
+      access_token,
+      sign_method: "sha256",
+      timestamp,
+    };
+
+    const packParamsWithBody = {
+      ...packParams,
+      packReq: JSON.stringify(packReq)
+    };
+
+    const packSign = generateSign(packApiPath, packParamsWithBody, APP_SECRET);
+
+    const packResponse = await axios.post(
       "https://api.daraz.pk/rest/order/fulfill/pack",
       new URLSearchParams({ packReq: JSON.stringify(packReq) }),
       {
-        params: { ...params, sign },
+        params: { ...packParams, sign: packSign },
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
       }
     );
 
-    console.log("Pack API Success:", response.data);
-    return res.status(200).json(response.data);
-  } catch (error) {
-    console.error("Pack API Error:", error.response?.data || error.message);
-    return res.status(500).json({
-      error: "Failed to pack order(s)",
-      details: error.response?.data || error.message,
-    });
-  }
-});
+    console.log("✅ Pack API Success:", packResponse.data);
 
-app.post("/make-order-rts", async (req, res) => {
-  const timestamp = Date.now().toString();
-  const rtsReq = req.body || {};
-  const { access_token } = req.query;
+    // STEP 2: Extract package IDs from pack response and mark as RTS
+    console.log("🚚 Step 2: Marking packages as RTS...");
+    
+    // Extract package IDs from the pack response
+    const packageIds = [];
+    if (packResponse.data && packResponse.data.result && packResponse.data.result.data) {
+      const packData = packResponse.data.result.data;
+      
+      // Check for pack_order_list structure
+      if (packData.pack_order_list && Array.isArray(packData.pack_order_list)) {
+        packData.pack_order_list.forEach(order => {
+          if (order.order_item_list && Array.isArray(order.order_item_list)) {
+            order.order_item_list.forEach(item => {
+              if (item.package_id) {
+                packageIds.push(item.package_id);
+              }
+            });
+          }
+        });
+      }
+      
+      // Also check for direct packages structure
+      if (packData.packages && Array.isArray(packData.packages)) {
+        packData.packages.forEach(pkg => {
+          if (pkg.package_id) {
+            packageIds.push(pkg.package_id);
+          }
+        });
+      }
+      
+      // Also check for direct package_id in response
+      if (packData.package_id) {
+        packageIds.push(packData.package_id);
+      }
+    }
 
-  console.log("🔍 DEBUG: Full request body:", req.body);
-  console.log("🔍 DEBUG: rtsReq:", rtsReq);
-  console.log("🔍 DEBUG: rtsReq.packages:", rtsReq.packages);
-  console.log("🔍 DEBUG: Is packages array?", Array.isArray(rtsReq.packages));
+    console.log("📦 Extracted Package IDs:", packageIds);
 
-  if (!access_token) {
-    return res.status(400).json({ error: "Missing access_token" });
-  }
+    if (packageIds.length === 0) {
+      console.log("⚠️ No package IDs found in pack response, returning pack result only");
+      return res.status(200).json({
+        message: "Orders packed successfully, but no package IDs found for RTS",
+        packResult: packResponse.data,
+        rtsResult: null
+      });
+    }
 
-  if (!rtsReq || !Array.isArray(rtsReq.packages)) {
-    console.log("❌ Validation failed:");
-    console.log("  - rtsReq exists:", !!rtsReq);
-    console.log("  - packages exists:", !!rtsReq.packages);
-    console.log("  - packages is array:", Array.isArray(rtsReq.packages));
-    return res.status(400).json({ error: "Missing or invalid packages" });
-  }
+    // Create RTS request
+    const readyToShipReq = {
+      packages: packageIds.map(packageId => ({
+        package_id: packageId
+      }))
+    };
 
-  const apiPath = "/order/package/rts";
-  const params = {
-    app_key: APP_KEY,
-    access_token,
-    sign_method: "sha256",
-    timestamp,
-  };
+    console.log("📋 RTS Request:", JSON.stringify(readyToShipReq, null, 2));
 
-  // For POST requests with body, include the body content in signature
-  const paramsWithBody = {
-    ...params,
-    rtsReq: JSON.stringify(rtsReq)
-  };
+    // STEP 3: Mark packages as RTS
+    const rtsTimestamp = Date.now().toString();
+    const rtsApiPath = "/order/package/rts";
+    const rtsParams = {
+      app_key: APP_KEY,
+      access_token,
+      sign_method: "sha256",
+      timestamp: rtsTimestamp,
+    };
 
-  const sign = generateSign(apiPath, paramsWithBody, APP_SECRET);
+    const rtsParamsWithBody = {
+      ...rtsParams,
+      readyToShipReq: JSON.stringify(readyToShipReq)
+    };
 
-  try {
-    const response = await axios.post(
+    const rtsSign = generateSign(rtsApiPath, rtsParamsWithBody, APP_SECRET);
+
+    const rtsResponse = await axios.post(
       "https://api.daraz.pk/rest/order/package/rts",
-      new URLSearchParams({ rtsReq: JSON.stringify(rtsReq) }),
+      new URLSearchParams({ readyToShipReq: JSON.stringify(readyToShipReq) }),
       {
-        params: { ...params, sign },
+        params: { ...rtsParams, sign: rtsSign },
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
       }
     );
 
-    console.log("RTS API Success:", response.data);
-    return res.status(200).json(response.data);
+    console.log("✅ RTS API Success:", rtsResponse.data);
+
+    // Return combined result
+    return res.status(200).json({
+      message: "Orders packed and marked as RTS successfully",
+      packResult: packResponse.data,
+      rtsResult: rtsResponse.data
+    });
+
   } catch (error) {
-    console.error("RTS API Error:", error.response?.data || error.message);
+    console.error("❌ Pack and RTS API Error:", error.response?.data || error.message);
     return res.status(500).json({
-      error: "Failed to mark package(s) as RTS",
+      error: "Failed to pack orders and mark as RTS",
       details: error.response?.data || error.message,
     });
   }
 });
+
 
 app.get("/get-patients", async (req, res) => {
   const timestamp = Date.now().toString();
