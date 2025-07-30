@@ -673,6 +673,181 @@ app.get("/get-daraz-order-logistics", async (req, res) => {
   }
 });
 
+app.post("/make-order-rts", async (req, res) => {
+  const timestamp = Date.now().toString();
+  const readyToShipReq = req.body || {};
+  const { access_token } = req.query;
+
+  console.log("🔍 DEBUG: Full request body:", req.body);
+  console.log("🔍 DEBUG: readyToShipReq:", readyToShipReq);
+  console.log("🔍 DEBUG: readyToShipReq.packages:", readyToShipReq.packages);
+  console.log("🔍 DEBUG: Is packages array?", Array.isArray(readyToShipReq.packages));
+
+  if (!access_token) {
+    return res.status(400).json({ error: "Missing access_token" });
+  }
+
+  if (!readyToShipReq || !Array.isArray(readyToShipReq.packages)) {
+    console.log("❌ Validation failed:");
+    console.log("  - readyToShipReq exists:", !!readyToShipReq);
+    console.log("  - packages exists:", !!readyToShipReq.packages);
+    console.log("  - packages is array:", Array.isArray(readyToShipReq.packages));
+    return res.status(400).json({ error: "Missing or invalid packages" });
+  }
+
+  const apiPath = "/order/package/rts";
+  const params = {
+    app_key: APP_KEY,
+    access_token,
+    sign_method: "sha256",
+    timestamp,
+  };
+
+  // For POST requests with body, include the body content in signature
+  const paramsWithBody = {
+    ...params,
+    readyToShipReq: JSON.stringify(readyToShipReq)
+  };
+
+  const sign = generateSign(apiPath, paramsWithBody, APP_SECRET);
+
+  try {
+    const response = await axios.post(
+      "https://api.daraz.pk/rest/order/package/rts",
+      new URLSearchParams({ readyToShipReq: JSON.stringify(readyToShipReq) }),
+      {
+        params: { ...params, sign },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    console.log("RTS API Success:", response.data);
+    return res.status(200).json(response.data);
+  } catch (error) {
+    console.error("RTS API Error:", error.response?.data || error.message);
+    return res.status(500).json({
+      error: "Failed to mark package(s) as RTS",
+      details: error.response?.data || error.message,
+    });
+  }
+});
+
+app.post("/make-order-pack", async (req, res) => {
+  const timestamp = Date.now().toString();
+  const packReq = req.body || {};
+  const { access_token } = req.query;
+
+  // console.log(access_token);
+  if (!access_token) {
+    return res.status(400).json({ error: "Missing access_token" });
+  }
+
+  if (!packReq || !Array.isArray(packReq.pack_order_list)) {
+    return res.status(400).json({ error: "Missing or invalid pack_order_list" });
+  }
+
+  const apiPath = "/order/fulfill/pack";
+  const params = {
+    app_key: APP_KEY,
+    access_token,
+    sign_method: "sha256",
+    timestamp,
+  };
+
+  // For POST requests with body, include the body content in signature
+  const paramsWithBody = {
+    ...params,
+    packReq: JSON.stringify(packReq)
+  };
+
+  const sign = generateSign(apiPath, paramsWithBody, APP_SECRET);
+
+  try {
+    const response = await axios.post(
+      "https://api.daraz.pk/rest/order/fulfill/pack",
+      new URLSearchParams({ packReq: JSON.stringify(packReq) }),
+      {
+        params: { ...params, sign },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    console.log("Pack API Success:", response.data);
+    return res.status(200).json(response.data);
+  } catch (error) {
+    console.error("Pack API Error:", error.response?.data || error.message);
+    return res.status(500).json({
+      error: "Failed to pack order(s)",
+      details: error.response?.data || error.message,
+    });
+  }
+});
+
+app.post("/make-order-rts", async (req, res) => {
+  const timestamp = Date.now().toString();
+  const rtsReq = req.body || {};
+  const { access_token } = req.query;
+
+  console.log("🔍 DEBUG: Full request body:", req.body);
+  console.log("🔍 DEBUG: rtsReq:", rtsReq);
+  console.log("🔍 DEBUG: rtsReq.packages:", rtsReq.packages);
+  console.log("🔍 DEBUG: Is packages array?", Array.isArray(rtsReq.packages));
+
+  if (!access_token) {
+    return res.status(400).json({ error: "Missing access_token" });
+  }
+
+  if (!rtsReq || !Array.isArray(rtsReq.packages)) {
+    console.log("❌ Validation failed:");
+    console.log("  - rtsReq exists:", !!rtsReq);
+    console.log("  - packages exists:", !!rtsReq.packages);
+    console.log("  - packages is array:", Array.isArray(rtsReq.packages));
+    return res.status(400).json({ error: "Missing or invalid packages" });
+  }
+
+  const apiPath = "/order/package/rts";
+  const params = {
+    app_key: APP_KEY,
+    access_token,
+    sign_method: "sha256",
+    timestamp,
+  };
+
+  // For POST requests with body, include the body content in signature
+  const paramsWithBody = {
+    ...params,
+    rtsReq: JSON.stringify(rtsReq)
+  };
+
+  const sign = generateSign(apiPath, paramsWithBody, APP_SECRET);
+
+  try {
+    const response = await axios.post(
+      "https://api.daraz.pk/rest/order/package/rts",
+      new URLSearchParams({ rtsReq: JSON.stringify(rtsReq) }),
+      {
+        params: { ...params, sign },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    console.log("RTS API Success:", response.data);
+    return res.status(200).json(response.data);
+  } catch (error) {
+    console.error("RTS API Error:", error.response?.data || error.message);
+    return res.status(500).json({
+      error: "Failed to mark package(s) as RTS",
+      details: error.response?.data || error.message,
+    });
+  }
+});
+
 app.get("/get-patients", async (req, res) => {
   const timestamp = Date.now().toString();
   const { access_token, order_id, package_id_list, locale } = req.query;
@@ -978,7 +1153,7 @@ app.get('/api/slots', async (req, res) => {
 
 
 app.get("/test", (req, res) => {
-  res.send("API is working fine!");
+  res.send("API is working fine and sound!");
 });
 
 const PORT = 3000;
