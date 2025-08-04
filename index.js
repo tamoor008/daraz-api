@@ -494,16 +494,22 @@ app.get("/get-daraz-query-income-details", async (req, res) => {
     const transactions = financeRespone?.data?.data || [];
     const total = calculateOrderBalances(transactions);
 
-
-    // console.log(transactions,'transactions');
-
-
+    console.log('📊 Total transactions found:', transactions.length);
+    console.log('💰 Total order balances:', total.length);
 
     return res.status(200).json({
-      total: total,
-      transactions: transactions
-      // financeRespone: total,
-
+      message: 'Transaction details retrieved successfully',
+      data: {
+        total: total,
+        transactions: transactions,
+        summary: {
+          totalTransactions: transactions.length,
+          totalOrders: total.length,
+          totalAmount: total.reduce((sum, order) => sum + order.total_amount, 0)
+        }
+      },
+      error: null,
+      statusCode: 200,
     });
 
   } catch (error) {
@@ -952,28 +958,38 @@ const hardcodedPatient = {
   __v: 0,
 };
 
+
+
+
+
 app.get('/api/patient', async (req, res) => {
-  const { email,time } = req.query;
-  console.log(email,'email');
-  console.log(time,'time');
+  console.log('req.query',req.query);
+  console.log('req.body',req.body);
+  
+  const { phoneNumber } = req.query;
+  
+  console.log('📞 Original phoneNumber:', phoneNumber, 'Type:', typeof phoneNumber);
 
-  if (!email) {
-    return res.status(400).json({
-      message: 'email is required',
-      data: null,
-      error: 'Missing email parameter',
-      statusCode: 400,
-    });
+  // Use default phone number if not provided
+  let searchPhoneNumber = phoneNumber || '+92322222222';
+  console.log('🔧 Before formatting:', searchPhoneNumber, 'Type:', typeof searchPhoneNumber);
+  
+  // Add plus sign if not present
+  if (searchPhoneNumber && !searchPhoneNumber.startsWith('+')) {
+    searchPhoneNumber = '+' + searchPhoneNumber;
+    console.log('➕ Added plus sign');
   }
+  
+  console.log('🔍 Final phone number:', searchPhoneNumber);
 
-  try {
-    const response = await axios.get(`https://das-admin-backend.moonsys.co/api/v1/patients/search`, {
-      params: { email },
-      headers: {
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODVjMjdhMDg3YmQ0MjhiMjlmYzc3M2EiLCJlbWFpbCI6ImFnZW50QGVtYWlsLmNvbSIsImlhdCI6MTc1MTk5NzU5MCwiZXhwIjoxNzgzNTMzNTkwfQ.tUjieOnJzQYuEnbFBQX-mOxT67oCVFIXPF93M48AJ_Q`, // <-- Replace with your actual token
-        Accept: 'application/json',
-      },
-    });
+      try {
+      const response = await axios.get(`https://das-admin-backend.moonsys.co/api/v1/patients/search`, {
+        params: { phoneNumber: searchPhoneNumber },
+        headers: {
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2ODVjMjdhMDg3YmQ0MjhiMjlmYzc3M2EiLCJlbWFpbCI6ImFnZW50QGVtYWlsLmNvbSIsImlhdCI6MTc1MTk5NzU5MCwiZXhwIjoxNzgzNTMzNTkwfQ.tUjieOnJzQYuEnbFBQX-mOxT67oCVFIXPF93M48AJ_Q`, // <-- Replace with your actual token
+          Accept: 'application/json',
+        },
+      });
 
     // Forward the external API response directly
     return res.status(response.status).json(response.data);
@@ -1091,8 +1107,6 @@ app.post('/api/patient/create', async (req, res) => {
   }
 });
 
-
-
 app.get('/api/slots', async (req, res) => {
   const { date } = req.query;
   console.log('Requested date',date);
@@ -1111,7 +1125,7 @@ app.get('/api/slots', async (req, res) => {
 
   // Define working hours
   let startHour = 9;
-  let endHour = 17;
+  let endHour = 18;
 
   if (dayOfWeek === 0) {
     // Sunday
@@ -1190,6 +1204,67 @@ app.get('/api/slots', async (req, res) => {
 
 
 
+
+
+
+app.get("/get-practitioners", async (req, res) => {
+  console.log("🏥 Getting practitioners...");
+
+  try {
+    // Return hardcoded practitioner data
+    const practitioners = [
+      {
+        "id": "685d2ada8385f0131d591f67",
+        "name": "Malik Humza",
+        "email": "1@email.com",
+        "role": "practitioner",
+        "phoneNumber": "+921111111111",
+        "createdAt": "2025-06-26T11:11:22.184Z",
+        "updatedAt": "2025-06-26T11:11:22.184Z"
+      },
+      {
+        "id": "6876397d04420f9830b4a8c9",
+        "name": "Haleema MoonSys",
+        "email": "haleema@email.com",
+        "role": "practitioner",
+        "phoneNumber": "03014358102",
+        "createdAt": "2025-07-15T11:20:29.936Z",
+        "updatedAt": "2025-07-21T11:45:47.504Z"
+      },
+      {
+        "id": "6888de0c5e9d132a9f2a3516",
+        "name": "Tamoor Malik",
+        "email": "tamoormalik088@gmail.com",
+        "role": "practitioner",
+        "phoneNumber": "03215799205",
+        "createdAt": "2025-07-29T14:43:24.050Z",
+        "updatedAt": "2025-07-29T14:43:24.050Z"
+      }
+    ];
+
+    console.log(`✅ Found ${practitioners.length} practitioners`);
+
+    return res.status(200).json({
+      message: 'Practitioners retrieved successfully',
+      data: {
+        totalPractitioners: practitioners.length,
+        practitioners: practitioners
+      },
+      error: null,
+      statusCode: 200,
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching practitioners:', error.message);
+    
+    return res.status(500).json({
+      message: 'Something went wrong while fetching practitioners',
+      data: null,
+      error: error.message,
+      statusCode: 500,
+    });
+  }
+});
 
 app.get("/test", (req, res) => {
   res.send("API is working fine and sound!");
