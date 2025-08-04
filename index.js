@@ -8,8 +8,8 @@ const app = express();
 app.use(cors({ origin: true }));
 app.use(express.json()); // To parse JSON request body
 
-const APP_KEY = "503646";
-const APP_SECRET = "GRM2aosy8VXIV0xzclq6loMKeaRAv996";
+const APP_KEY = process.env.APP_KEY;
+const APP_SECRET = process.env.APP_SECRET;
 
 
 
