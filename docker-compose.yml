@@ -1,11 +1,8 @@
 version: "3.8"
 services:
   app:
-    build: .
-    container_name: das-elevenlabs
-    environment:
-      - PORT=3001
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3001:3001"
-    restart: unless-stopped
-
