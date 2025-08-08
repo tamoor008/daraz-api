@@ -1,0 +1,109 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+.nyc_output
+coverage/
+dist/
+build/
+
+# Cache directories
+.node_modules/
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependency directories
+node_modules/
+jspm_packages/
+bower_components/
+
+# TypeScript
+*.tsbuildinfo
+
+# IDE specific files
+.vscode/*
+.vscode
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sw?
+*.swo
+*.swn
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Database files
+*.ns
+*.0
+*.1
+*.sock
+/data/db/
+/data/mysql/
+
+# NestJS generated files
+src/**/*.d.ts
+src/**/*.js
+src/**/*.map
+
+# Test artifacts
+/test-results/
+/reports/
+
+
+# MySQL/MariaDB
+*.ibd
+*.frm
+*.MYD
+*.MYI
+*.TRG
+*.TRN
+
+# MongoDB
+mongod.log
+config/mongod.conf
+
+# Swagger/OpenAPI documentation
+/swagger_output/
+
+# SSL certificates
+*.key
+*.pem
+*.crt
+*.csr
+
+# Editor directories and files
+.ionide/
+.history/
+.svelte-kit/
+# Sentry Config File
+.sentryclirc
+
+
+# clinic Config File
+.clinic

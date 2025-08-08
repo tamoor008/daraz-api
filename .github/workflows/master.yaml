@@ -1,0 +1,27 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: ["main"]
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create env file
+        run: |
+          touch .env
+          echo APP_KEY='${{ secrets.APP_KEY}}' >> .env
+          echo APP_SECRET='${{ secrets.APP_SECRET}}' >> .env
+
+
+          cat .env
+      - name: Build and deploy
+        run: |
+          sudo docker compose -f docker-compose.yml -p das-eleven-labs build
+          sudo docker compose -f docker-compose.yml -p das-eleven-labs down --remove-orphans
+          sudo docker compose -f docker-compose.yml -p das-eleven-labs up -d
+      - name: Clean up
+        run: |
+          sudo docker system prune -f
+          sudo docker volume prune -f

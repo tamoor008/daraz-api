@@ -1,15 +1,15 @@
-FROM node:20-alpine
+FROM node:22-slim
 
-WORKDIR /app
+WORKDIR /usr/src/app
 
 COPY package*.json ./
 RUN npm ci --only=production
 
 COPY . .
 
+RUN npm install -g pm2
+
 ENV PORT=3001
 EXPOSE 3001
 
-CMD ["node", "index.js"]
-
-
+CMD ["pm2-runtime", "start", "index.js"]
